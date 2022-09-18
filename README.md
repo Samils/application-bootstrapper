@@ -1,1 +1,1 @@
-# Samils Component SAML
+# Samils Application Bootstrapper
