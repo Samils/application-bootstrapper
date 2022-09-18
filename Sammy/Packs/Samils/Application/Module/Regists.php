@@ -66,23 +66,21 @@ namespace Sammy\Packs\Samils\Application\Module {
      * [RegisterModule description]
      * @param string $moduleName [description]
      */
-    public final static function RegisterModule ($moduleName = '') {
-      $calledClassName = \lower(get_called_class());
+    public static function RegisterModule ($moduleName = '') {
+      $calledClassName = strtolower (get_called_class ());
 
-      if (class_exists($moduleName)) {
+      if (class_exists ($moduleName)) {
         # modules of the current
         # application instance
         # globally stored inside the
         # controller base global scope
-        $m = self::$ApplicationModules;
+        if (!(isset (self::$ApplicationModules [$calledClassName]) && is_array (self::$ApplicationModules [$calledClassName]))) {
+          self::$ApplicationModules [$calledClassName] = [];
+        }
 
-        if (!(isset($m[ $calledClassName ]) && is_array($m[ $calledClassName ])))
-          self::$ApplicationModules[ $calledClassName ] = array ();
-
-        array_push(self::$ApplicationModules[ $calledClassName ],
-          new $moduleName (
-            ['RestryingControllerName' => static::class]
-          )
+        array_push (
+          self::$ApplicationModules [$calledClassName],
+          new $moduleName (['RestryingControllerName' => static::class])
         );
       }
     }

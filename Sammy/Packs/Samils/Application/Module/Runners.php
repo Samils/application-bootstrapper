@@ -31,10 +31,13 @@
  * SOFTWARE.
  */
 namespace Sammy\Packs\Samils\Application\Module {
+  use Sami;
   use Closure;
+  use Sammy\Packs\Func;
+  use Samils\Handler\Error;
   use Sammy\Packs\HTTP\Request;
   use Sammy\Packs\HTTP\Response;
-  use Samils\ObjectBase as Obj;
+  use Sammy\Packs\Sami\Debugger;
   /**
    * Make sure the module base internal trait is not
    * declared in the php global scope defore creating
@@ -43,7 +46,7 @@ namespace Sammy\Packs\Samils\Application\Module {
    * when trying to run the current command by the cli
    * API.
    */
-  if (!trait_exists('Sammy\Packs\Samils\Application\Module\Runners')){
+  if (!trait_exists ('Sammy\Packs\Samils\Application\Module\Runners')) {
   /**
    * @trait Runners
    * Base internal trait for the
@@ -71,94 +74,77 @@ namespace Sammy\Packs\Samils\Application\Module {
         $module = $this->module ($module);
       }
 
-      if (!is_module ($module)) {
-        return;
+      if (!Sami::IsModule ($module)) {
+        return self::NoValidControllerErr ($module, debug_backtrace ());
       }
 
-      $middlewares = $module->ApplicationMiddlewares();
+      $middlewares = $module->ApplicationMiddlewares ();
       $runner = requires ('sami/runner');
 
-      $req = new Request ( $module );
-      $res = new Response ( $module );
+      ob_start();
+
+      $req = new Request ($module);
+      $res = new Response ($module);
 
       #
-      Obj::Methods2GlobalScope('\\Sammy\\Packs\\HTTP\\Response',
-        '\\Sammy\\Packs\\HTTP\\Response::Instance()', array (
-          'exlude' => array (
-            'Instance',
-            'getProperty',
-            'setProperty',
-            'def'
-          )
-        )
-      );
-
-      Obj::Methods2GlobalScope('\\Sammy\\Packs\\HTTP\\Request',
-        '\\Sammy\\Packs\\HTTP\\Request::Instance()', array (
-          'exlude' => array (
-            'Instance',
-            'getProperty',
-            'setProperty',
-            'def'
-          )
-        )
-      );
-
-      Obj::Helpers2GlobalScope ();
 
       # Run whole application
       # middlewares before initializing
       # the application runner module
-      if (is_array($middlewares) && $middlewares) {
+      if (is_array ($middlewares) && $middlewares) {
         # Map the '$middlewares' array on
         # condition that this is filled with a list of
         # module middlewares that should exetute before
         # the controller action executing.
         # Get the middleware core in an '$m' variable.
-        foreach ($middlewares as $i => $m) {
+        foreach ($middlewares as $i => $middleware) {
           # Bind the middleware to the application
           # module class in order keeping the module
           # reference, but avoid it if the middleware
           # is not a Closure; make sure it is before
           # binding.
-          if (!($m instanceof Closure) && is_callable($m)) {
-            call_user_func_array ($m,
-              [$req, $res]
-            );
+          if (!($middleware instanceof Closure) && is_callable ($middleware)) {
+
+            $arguments = [$req, $res];
+
+            if ($middleware instanceof Func) {
+              $middleware->apply ($module, $arguments);
+            } else {
+              call_user_func_array ($middleware, $arguments);
+            }
+
             continue;
           }
-
           # Bind the middleware closure to
           # the application module scope
           # in order getting access to the
           # application features
-          $middlewareHandler = Closure::bind($m, $module,
-            static::class
-          );
+          $middlewareHandler = Closure::bind ($middleware, $module, static::class);
 
-          $middlewareHandler (
-            $req, # Sammy\Packs\HTTP\Request
-            $res  # Sammy\Packs\HTTP\Response
-          );
+          call_user_func_array ($middlewareHandler, [$req, $res]);
+          #(
+            #$req, # Sammy\Packs\HTTP\Request
+            #$res  # Sammy\Packs\HTTP\Response
+          #);
         }
       }
 
-      $middlewares = get_declared_classes_extending (
-        'Middleware'
-      );
-      $middlewaresCount = count ( $middlewares );
+      $middlewares = get_declared_classes_extending ('Middleware');
+      $middlewaresCount = count ($middlewares);
 
       for ($i = 0; $i < $middlewaresCount; $i++) {
         $middleware = $middlewares [$i];
 
         $middlewareCore = new $middleware;
 
-        if (method_exists($middlewareCore, 'handle')) {
-          call_user_func_array ([$middlewareCore, 'handle'],
-            [$req, $res]
-          );
+        if (method_exists ($middlewareCore, 'handle')) {
+          call_user_func_array ([$middlewareCore, 'handle'], [$req, $res]);
         }
       }
+
+      $bufferData = ob_get_clean ();
+
+      Debugger::log ($bufferData);
 
       exit ($runner->runApp ($module));
     }

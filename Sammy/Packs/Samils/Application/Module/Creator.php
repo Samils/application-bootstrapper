@@ -39,7 +39,7 @@ namespace Sammy\Packs\Samils\Application\Module {
    * when trying to run the current command by the cli
    * API.
    */
-  if (!trait_exists('Sammy\Packs\Samils\Application\Module\Creator')){
+  if (!trait_exists ('Sammy\Packs\Samils\Application\Module\Creator')) {
   /**
    * @trait Creator
    * Base internal trait for the
@@ -57,69 +57,53 @@ namespace Sammy\Packs\Samils\Application\Module {
    * -
    */
   trait Creator {
-    public static function Mod($mod_name = null, $mod_requires = null){
-      $mod_name = \lower ($mod_name);
+    public static function Mod (string $moduleName = null){
+      $moduleName = strtolower ($moduleName);
 
-      $trace_ = debug_backtrace();
+      $trace_ = debug_backtrace ();
 
-      if(isset($trace_[0]['file']) && $trace_[0]['file']===__FILE__){
-        $trace = $trace_[1];
-      }else{
-        $trace = $trace_[0];
+      $trace = $trace_ [0];
+
+      if (isset ($trace_ [0]['file'])
+        && $trace_ [0]['file'] === __FILE__) {
+        $trace = $trace_ [1];
       }
 
-      if (!is_module_right_name($mod_name)) {
-        return error_bad_module_name($mod_name, $trace);
+      if (!self::IsModuleRightName ($moduleName)) {
+        return error_bad_module_name ($moduleName, $trace);
       }
 
-      $mod_requires = is_array($mod_requires) ? $mod_requires : [];
-
-      if (isset(self::$Modules[\lower($mod_name)])){
-        if (is_array(\lower($mod_requires))){
-          self::modImportRequires(
-            self::$Modules[ \lower($mod_name) ], (
-              $mod_requires
-            )
-          );
-        }
-        return self::$Modules[
-          \lower($mod_name)
-        ];
+      if (isset (self::$Modules [strtolower ($moduleName)])) {
+        return self::$Modules [strtolower ($moduleName)];
       }
 
-      if(class_exists($mod_name . 'Ctrl')){
-        $ctrl_name = ($mod_name . 'Ctrl');
-      }elseif(class_exists($mod_name . 'Controller')){
-        $ctrl_name = ($mod_name . 'Controller');
-      }else{
-        return error_not_found_controller($mod_name, $trace);
+      if (class_exists ($moduleName . 'Ctrl')) {
+        $controllerName = ($moduleName . 'Ctrl');
+      } elseif (class_exists ($moduleName . 'Controller')) {
+        $controllerName = ($moduleName . 'Controller');
+      } else {
+        return self::NoFoundControllerErr ($moduleName, $trace);
       }
 
-      if(!in_array('SamiController', class_parents($ctrl_name)))
-        return error_not_novalid_controller($mod_name, $trace);
-
-      $ControllerSerial = date('dymihs');
-      $module_class_name = (
-        $mod_name . 'ExtendedInternalClass' . (
-          $ControllerSerial
-        )
-      );
-
-      if (!class_exists($module_class_name)) {
-        eval('final class '.$module_class_name.' extends '.$ctrl_name.' {}');
+      if (!self::IsController ($controllerName)) {
+        return self::NoValidControllerErr ($moduleName, $trace);
       }
 
-      $mod = new $module_class_name($mod_name);
-      self::modImportRequires($mod, $mod_requires);
+      # $ControllerSerial = date('dymihs');
+      # $module_class_name = (
+      #   $moduleName . 'ExtendedInternalClass' . (
+      #     $ControllerSerial
+      #   )
+      # );
 
-      $SamiFiles = requires('sami-files');
-      if (is_callable($SamiFiles))
-        $mod->uses( $SamiFiles() );
+      # if (!class_exists ($module_class_name)) {
+      #   eval('final class '.$module_class_name.' extends '.$controllerName.' {}');
+      # }
 
-      self::$Modules[ \lower($mod_name) ] = (
-        $mod
-      );
-      return $mod;
+      $mod = new $controllerName ($moduleName);
+      # self::modImportRequires ($mod, $mod_requires);
+
+      return self::$Modules [strtolower ($moduleName)] = $mod;
     }
   }}
 }

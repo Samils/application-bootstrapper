@@ -36,6 +36,7 @@ namespace Sammy\Packs\Samils\Application\Module\Boot {
   use Sammy\Packs\Samils\Application\Module\Regists;
   use Sammy\Packs\Samils\Application\Module\Runners;
   use Sammy\Packs\Samils\Application\Module\Configs;
+  use Sammy\Packs\Samils\Application\Module\Helpers;
   /**
    * Make sure the module base internal trait is not
    * declared in the php global scope defore creating
@@ -67,6 +68,7 @@ namespace Sammy\Packs\Samils\Application\Module\Boot {
     use Regists;
     use Runners;
     use Configs;
+    use Helpers;
 
     /**
      * @var Modules
@@ -83,7 +85,6 @@ namespace Sammy\Packs\Samils\Application\Module\Boot {
      * an application running
      */
     private static $AppRunning = false;
-    private static $ApplicationBootstrapperDepsOn = false;
 
     /**
      * @var module
@@ -100,38 +101,29 @@ namespace Sammy\Packs\Samils\Application\Module\Boot {
      * - main module
      */
     public function application_module () {
-      $app = $this->module(__app__);
+      $app = $this->module (__app__);
 
-      if (!self::$ApplicationBootstrapperDepsOn) {
-        $app->apply ( requires ('sami-bundler'), [
-          'ApplicationObject' => $app
-        ]);
-        self::$ApplicationBootstrapperDepsOn = (true);
-      }
-
-      return ($app);
+      return $app;
     }
 
     public static function ApplicationModule () {
-      return call_user_func (
-        [new static, 'application_module']
-      );
+      return call_user_func ([new static, 'application_module']);
     }
 
     public static function ModExists ($mod_name = null){
-      if (is_string(\lower($mod_name)))
-        return (isset(self::$Modules[ \lower($mod_name) ]));
+      if (is_string (strtolower ($mod_name)))
+        return (isset (self::$Modules [strtolower ($mod_name) ]));
     }
 
     public static function setProperty ($property, $value = null) {
-      if (!!(is_string($property) && $property)) {
-        self::$Propers[$property] = ( $value );
+      if (!!(is_string ($property) && $property)) {
+        self::$Propers [$property] = $value;
       }
     }
 
     public static function getProperty ($property) {
-      if (is_string($property) && isset(self::$Propers[$property])) {
-        return ( self::$Propers[ $property ] );
+      if (is_string ($property) && isset (self::$Propers [$property])) {
+        return self::$Propers [$property];
       }
     }
   }}
